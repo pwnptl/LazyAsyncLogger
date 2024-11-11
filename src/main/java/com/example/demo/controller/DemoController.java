@@ -1,16 +1,20 @@
 package com.example.demo.controller;
 
-import lombok.extern.slf4j.Slf4j;
+import com.example.demo.logger.AsyncLogger;
+import org.slf4j.Logger;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RestController;
 
-@Slf4j
 @RestController
 public class DemoController {
-
+    Logger log = new AsyncLogger(DemoController.class);
 
     @GetMapping("/demo")
     public String greeting() {
+        log.info("request arrived");
+        log.atInfo().setMessage("data 1 {}")
+                .addArgument(() -> maskData())
+                .log();
         log.atInfo().setMessage("data 2 {}")
                 .addArgument(() -> maskData())
                 .log();
@@ -19,7 +23,7 @@ public class DemoController {
 
     private String maskData() {
         try {
-            Thread.sleep(4000);
+            Thread.sleep(3000);
         } catch (InterruptedException e) {
             throw new RuntimeException(e);
         }
