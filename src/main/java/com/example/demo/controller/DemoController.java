@@ -12,18 +12,25 @@ public class DemoController {
     @GetMapping("/demo")
     public String greeting() {
         log.info("request arrived");
-        log.atInfo().setMessage("data 1 {}")
+        log.atInfo()
+                .setMessage("data 1 {}")
                 .addArgument(() -> maskData())
                 .log();
-        log.atInfo().setMessage("data 2 {}")
+        log.atInfo()
                 .addArgument(() -> maskData())
+                .log("data 1.1 {}");
+        log.atInfo()
+                .setMessage("data 2 {} {}")
+                .addArgument(this::maskData)
+                .addArgument(this::maskData)
                 .log();
+        log.atInfo().log("some message");
         return "demo";
     }
 
     private String maskData() {
         try {
-            Thread.sleep(3000);
+            Thread.sleep(2000);
         } catch (InterruptedException e) {
             throw new RuntimeException(e);
         }

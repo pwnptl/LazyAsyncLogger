@@ -26,12 +26,13 @@ import java.util.function.Supplier;
 public class AsyncLogger extends AbstractLogger {
     private static final BlockingQueue<Supplier<Void>> logQueue;
     private static final Thread logProcessingThread;
+    private static final String THREAD_NAME = AsyncLogger.class.getSimpleName() + "-Thread";
     private final Level currentLevel;
     private final Logger slf4jLogger;
 
     static {
         logQueue = new LinkedBlockingQueue<>();
-        logProcessingThread = new Thread(AsyncLogger::processLog);
+        logProcessingThread = new Thread(AsyncLogger::processLog, THREAD_NAME);
 
         // In case of application shutdown, wait for the logger thread to complete the queue tasks.
         Runtime.getRuntime().addShutdownHook(new Thread(() -> {
@@ -111,8 +112,8 @@ public class AsyncLogger extends AbstractLogger {
             case DEBUG:
                 if (slf4jLogger.isDebugEnabled()) {
                     logQueue.add(() -> {
-                        Object[] arguments2 = preprocess(arguments);
-                        slf4jLogger.debug(messagePattern, arguments2, throwable);
+                        preprocess(arguments);
+                        slf4jLogger.debug(messagePattern, combineArgs(arguments, throwable));
                         return null;
                     });
                 }
@@ -120,8 +121,8 @@ public class AsyncLogger extends AbstractLogger {
             case INFO:
                 if (slf4jLogger.isInfoEnabled()) {
                     logQueue.add(() -> {
-                        Object[] arguments2 = preprocess(arguments);
-                        slf4jLogger.info(messagePattern, arguments2, throwable);
+                        preprocess(arguments);
+                        slf4jLogger.info(messagePattern, combineArgs(arguments, throwable));
                         return null;
                     });
                 }
@@ -130,7 +131,7 @@ public class AsyncLogger extends AbstractLogger {
                 if (slf4jLogger.isWarnEnabled()) {
                     logQueue.add(() -> {
                         preprocess(arguments);
-                        slf4jLogger.warn(messagePattern, arguments, throwable);
+                        slf4jLogger.warn(messagePattern, combineArgs(arguments, throwable));
                         return null;
                     });
                 }
@@ -139,7 +140,7 @@ public class AsyncLogger extends AbstractLogger {
                 if (slf4jLogger.isErrorEnabled()) {
                     logQueue.add(() -> {
                         preprocess(arguments);
-                        slf4jLogger.error(messagePattern, arguments, throwable);
+                        slf4jLogger.error(messagePattern, combineArgs(arguments, throwable));
                         return null;
                     });
                 }
@@ -148,7 +149,7 @@ public class AsyncLogger extends AbstractLogger {
                 if (slf4jLogger.isInfoEnabled()) {
                     logQueue.add(() -> {
                         preprocess(arguments);
-                        slf4jLogger.info(messagePattern, arguments, throwable);
+                        slf4jLogger.info(messagePattern, combineArgs(arguments, throwable));
                         return null;
                     });
                 }
@@ -156,14 +157,27 @@ public class AsyncLogger extends AbstractLogger {
         }
     }
 
-    private Object[] preprocess(Object[] arguments) {
-        if(arguments != null)
-        for (int i=0;i<arguments.length; ++i) {
-            if (arguments[i] instanceof Supplier<?>) {
-                arguments[i] = ((Supplier<?>) arguments[i]).get();
-            }
+    private Object[] combineArgs(Object[] arguments, Throwable t) {
+
+        int argLen = arguments == null ? 0 : arguments.length;
+        int tLen = t == null ? 0 : 1;
+        Object[] combinedArguments = new Object[argLen + tLen];
+        if (arguments != null) {
+            System.arraycopy(arguments, 0, combinedArguments, 0, argLen);
         }
-        return arguments;
+        if (t != null) {
+            combinedArguments[argLen] = t;
+        }
+        return combinedArguments;
+    }
+
+    private void preprocess(Object[] arguments) {
+        if(arguments != null)
+            for (int i=0;i<arguments.length; ++i) {
+                if (arguments[i] instanceof Supplier<?>) {
+                    arguments[i] = ((Supplier<?>) arguments[i]).get();
+                }
+            }
     }
 
     @Override
